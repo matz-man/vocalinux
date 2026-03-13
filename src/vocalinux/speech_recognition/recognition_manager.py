@@ -753,8 +753,8 @@ class SpeechRecognitionManager:
                 initial_prompt = None
                 if self._custom_vocabulary:
                     prompt = ", ".join(self._custom_vocabulary)
-                    if len(prompt) > 500:
-                        prompt = prompt[:500].rsplit(",", 1)[0]
+                    if len(prompt) > 200:
+                        prompt = prompt[:200].rsplit(",", 1)[0]
                     initial_prompt = prompt
 
                 # Transcribe with Whisper (handles variable length audio automatically)
@@ -978,8 +978,8 @@ class SpeechRecognitionManager:
                 transcribe_kwargs = {"language": lang}
                 if self._custom_vocabulary:
                     prompt = ", ".join(self._custom_vocabulary)
-                    if len(prompt) > 500:
-                        prompt = prompt[:500].rsplit(",", 1)[0]
+                    if len(prompt) > 200:
+                        prompt = prompt[:200].rsplit(",", 1)[0]
                     transcribe_kwargs["initial_prompt"] = prompt
 
                 try:
