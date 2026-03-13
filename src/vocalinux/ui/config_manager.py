@@ -27,31 +27,7 @@ DEFAULT_CONFIG = {
         "vad_sensitivity": 3,  # Voice Activity Detection sensitivity (1-5)
         "silence_timeout": 2.0,  # Seconds of silence before stopping
         "voice_commands_enabled": None,  # None = auto (enabled for VOSK, disabled for Whisper)
-        "custom_vocabulary": [
-            # Git & Version Control
-            "Repository", "Commit", "Push", "Pull", "Merge", "Branch", "Clone",
-            "Checkout", "Rebase", "Stash", "Worktree", "Release", "Tag",
-            # DevOps & Infrastructure
-            "Docker", "Kubernetes", "Container", "Cluster", "Pipeline", "Deployment",
-            "Server", "Client", "Cloud", "Hosting", "Staging", "Production",
-            "Monitoring", "Logging", "Caching", "Load Balancer",
-            # Web & Software Development
-            "Backend", "Frontend", "API", "Endpoint", "Middleware", "Microservice",
-            "Framework", "Library", "Package", "Module", "Plugin", "Widget",
-            "Webhook", "Token", "OAuth", "Callback", "Handler", "Router",
-            # Development Process
-            "Feature", "Bug", "Bugfix", "Hotfix", "Refactoring", "Debugging",
-            "Code Review", "Pull Request", "Issue", "Ticket", "Sprint", "Backlog",
-            "Build", "Runtime", "Compile", "Deploy", "Rollback", "Rollout",
-            # Data & Config
-            "Datenbank", "Database", "Query", "Schema", "Migration", "Backup",
-            "Config", "Settings", "Setup", "Template", "Script", "Snippet",
-            "Workspace", "Dashboard", "Interface", "Component",
-            # General IT
-            "Download", "Upload", "Update", "Upgrade", "Shortcut", "Screenshot",
-            "Browser", "Proxy", "Firewall", "Gateway", "Streaming", "Rendering",
-            "Thread", "Process", "Timeout", "Timestamp", "Trigger", "Scheduler",
-        ],
+        "custom_vocabulary": [],
     },
     "audio": {
         "device_index": None,  # Audio input device index (None for system default)

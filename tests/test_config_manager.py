@@ -401,7 +401,6 @@ class TestConfigManager(unittest.TestCase):
         sr = config["speech_recognition"]
         self.assertIn("custom_vocabulary", sr)
         self.assertIsInstance(sr["custom_vocabulary"], list)
-        self.assertGreater(len(sr["custom_vocabulary"]), 0)
 
     def test_non_super_shortcut_unchanged(self):
         test_config = {
