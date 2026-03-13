@@ -749,9 +749,13 @@ class SpeechRecognitionManager:
                     lang = None  # Auto-detect
 
                 # Build initial_prompt from custom vocabulary
+                # Whisper uses ~224 tokens per segment; keep prompt well under that
                 initial_prompt = None
                 if self._custom_vocabulary:
-                    initial_prompt = ", ".join(self._custom_vocabulary)
+                    prompt = ", ".join(self._custom_vocabulary)
+                    if len(prompt) > 500:
+                        prompt = prompt[:500].rsplit(",", 1)[0]
+                    initial_prompt = prompt
 
                 # Transcribe with Whisper (handles variable length audio automatically)
                 result = self.model.transcribe(
@@ -973,9 +977,22 @@ class SpeechRecognitionManager:
                 transcribe_start = time.time()
                 transcribe_kwargs = {"language": lang}
                 if self._custom_vocabulary:
-                    transcribe_kwargs["initial_prompt"] = ", ".join(self._custom_vocabulary)
+                    prompt = ", ".join(self._custom_vocabulary)
+                    if len(prompt) > 500:
+                        prompt = prompt[:500].rsplit(",", 1)[0]
+                    transcribe_kwargs["initial_prompt"] = prompt
 
-                segments = self.model.transcribe(audio_float, **transcribe_kwargs)
+                try:
+                    segments = self.model.transcribe(audio_float, **transcribe_kwargs)
+                except Exception as prompt_err:
+                    if "initial_prompt" in str(prompt_err).lower() or self._custom_vocabulary:
+                        logger.warning(
+                            f"Transcription with initial_prompt failed, retrying without: {prompt_err}"
+                        )
+                        transcribe_kwargs.pop("initial_prompt", None)
+                        segments = self.model.transcribe(audio_float, **transcribe_kwargs)
+                    else:
+                        raise
                 transcribe_duration = time.time() - transcribe_start
 
             # Extract text from segments, filtering non-speech tokens
