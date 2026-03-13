@@ -1113,6 +1113,7 @@ class SettingsDialog(Gtk.Dialog):
 
         vocab_container = Gtk.ListBoxRow()
         vocab_container.set_activatable(False)
+        vocab_container.set_can_focus(False)
         vocab_container.get_style_context().add_class("preference-row")
 
         vocab_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
