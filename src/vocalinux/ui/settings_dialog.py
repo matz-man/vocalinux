@@ -1681,17 +1681,17 @@ class SettingsDialog(Gtk.Dialog):
         return False
 
     def _on_vocab_paste(self, textview):
-        """Intercept paste to insert plain text only, stripping control characters."""
+        """Intercept paste to insert plain text only, stripping all non-printable characters."""
+        import re
+
         clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         text = clipboard.wait_for_text()
         if text:
-            # Strip control characters except newline, replace newlines with comma-space
-            import unicodedata
-            clean = "".join(
-                c for c in text
-                if not unicodedata.category(c).startswith("C") or c == "\n"
-            )
-            clean = clean.replace("\n", ", ")
+            # Only keep printable chars: letters, digits, punctuation, basic whitespace
+            # This strips zero-width chars, control chars, BOM, NBSP, etc.
+            clean = re.sub(r"[^\w\s,.\-/()&'+]", "", text, flags=re.UNICODE)
+            # Collapse whitespace (tabs, multiple spaces, newlines) to single space
+            clean = re.sub(r"\s+", " ", clean).strip()
             # Insert at cursor, replacing selection if any
             buf = textview.get_buffer()
             if buf.get_has_selection():
