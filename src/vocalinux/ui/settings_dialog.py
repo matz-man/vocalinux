@@ -736,6 +736,7 @@ class SettingsDialog(Gtk.Dialog):
             False  # Flag to prevent recursive language change handling
         )
         self._applying_settings = False  # Flag to prevent recursive settings application
+        self._vocab_save_timeout_id = None
 
         # Setup CSS styling
         _setup_css()
@@ -1107,6 +1108,55 @@ class SettingsDialog(Gtk.Dialog):
 
         self.recognition_settings_tab.pack_start(group, False, False, 0)
 
+        # Custom Vocabulary group — standalone Gtk.Box (not PreferencesGroup)
+        # because we need a free-form TextView, not a ListBox of rows
+        vocab_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        vocab_box.get_style_context().add_class("preferences-group")
+
+        vocab_header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        vocab_header.set_margin_top(12)
+        vocab_header.set_margin_bottom(4)
+        vocab_header.set_margin_start(16)
+        vocab_header.set_margin_end(16)
+
+        vocab_title = Gtk.Label(label="Custom Vocabulary", xalign=0)
+        vocab_title.get_style_context().add_class("preferences-group-title")
+        vocab_header.pack_start(vocab_title, False, False, 0)
+
+        vocab_desc = Gtk.Label(
+            label="Technical terms for better recognition (Whisper/whisper.cpp only, comma-separated)",
+            xalign=0,
+            wrap=True,
+        )
+        vocab_desc.get_style_context().add_class("preference-row-subtitle")
+        vocab_header.pack_start(vocab_desc, False, False, 0)
+        vocab_box.pack_start(vocab_header, False, False, 0)
+
+        # Multi-line text entry for vocabulary
+        self.vocab_scrolled = Gtk.ScrolledWindow()
+        self.vocab_scrolled.set_min_content_height(80)
+        self.vocab_scrolled.set_max_content_height(120)
+        self.vocab_scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+
+        self.vocab_textview = Gtk.TextView()
+        self.vocab_textview.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.vocab_textview.set_left_margin(8)
+        self.vocab_textview.set_right_margin(8)
+        self.vocab_textview.set_top_margin(4)
+        self.vocab_textview.set_bottom_margin(4)
+        self.vocab_textview.set_tooltip_text(
+            "Enter technical terms separated by commas.\n"
+            "These words help Whisper recognize English terms in non-English speech.\n"
+            "Example: Repository, Commit, Docker, API, Frontend"
+        )
+        self.vocab_scrolled.add(self.vocab_textview)
+        vocab_box.pack_start(self.vocab_scrolled, True, True, 0)
+
+        self.recognition_settings_tab.pack_start(vocab_box, False, False, 0)
+
+        # Connect buffer changed signal with debounce
+        self.vocab_textview.get_buffer().connect("changed", self._on_vocabulary_changed)
+
         # Connect signals
         self.vad_spin.connect("value-changed", self._on_vad_changed)
         self.silence_spin.connect("value-changed", self._on_silence_changed)
@@ -1450,6 +1500,12 @@ class SettingsDialog(Gtk.Dialog):
         voice_commands_enabled = self.config_manager.is_voice_commands_enabled()
         self.voice_commands_switch.set_active(voice_commands_enabled)
 
+        # Load custom vocabulary
+        sr_settings = self.config_manager.get_settings().get("speech_recognition", {})
+        vocab_list = sr_settings.get("custom_vocabulary", [])
+        vocab_text = ", ".join(vocab_list)
+        self.vocab_textview.get_buffer().set_text(vocab_text)
+
     def _get_current_settings(self):
         """Get current settings from config manager."""
         self.config_manager.load_config()
@@ -1622,6 +1678,28 @@ class SettingsDialog(Gtk.Dialog):
             logger.warning(f"Failed to apply voice commands toggle immediately: {e}")
         logger.info(f"Voice commands {'enabled' if enabled else 'disabled'}")
         return False
+
+    def _on_vocabulary_changed(self, buffer):
+        """Handle vocabulary text changes with debounce."""
+        if self._initializing or self._applying_settings:
+            return
+        # Debounce: save after 1 second of no typing
+        if self._vocab_save_timeout_id:
+            GLib.source_remove(self._vocab_save_timeout_id)
+        self._vocab_save_timeout_id = GLib.timeout_add(1000, self._save_vocabulary)
+
+    def _save_vocabulary(self):
+        """Save vocabulary from text buffer to config."""
+        self._vocab_save_timeout_id = None
+        buffer = self.vocab_textview.get_buffer()
+        text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        vocab_list = [term.strip() for term in text.split(",") if term.strip()]
+        self.config_manager.set("speech_recognition", "custom_vocabulary", vocab_list)
+        self.config_manager.save_settings()
+        # Update running engine via public API
+        self.speech_engine.reconfigure(custom_vocabulary=vocab_list, force_download=False)
+        logger.info(f"Saved custom vocabulary: {len(vocab_list)} terms")
+        return False  # Don't repeat GLib timeout
 
     def _populate_language_options(self):
         """Populate language dropdown with supported languages."""
@@ -1867,12 +1945,18 @@ class SettingsDialog(Gtk.Dialog):
         vad = int(self.vad_spin.get_value())
         silence = self.silence_spin.get_value()
 
+        # Get vocabulary from text buffer
+        buffer = self.vocab_textview.get_buffer()
+        vocab_text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        vocab_list = [term.strip() for term in vocab_text.split(",") if term.strip()]
+
         return {
             "engine": engine,
             "model_size": model_size,
             "language": language,
             "vad_sensitivity": vad,
             "silence_timeout": silence,
+            "custom_vocabulary": vocab_list,
         }
 
     def _on_test_clicked(self, widget):
