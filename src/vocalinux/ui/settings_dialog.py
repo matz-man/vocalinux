@@ -1145,9 +1145,6 @@ class SettingsDialog(Gtk.Dialog):
             "Example: Repository, Commit, Docker, Pull Request, Deployment"
         )
         self.vocab_textview.set_accepts_tab(False)
-        # Intercept Ctrl+V to paste plain text only (paste-clipboard signal
-        # is an action signal and cannot reliably block the default handler)
-        self.vocab_textview.connect("key-press-event", self._on_vocab_key_press)
         self.vocab_scrolled.add(self.vocab_textview)
         vocab_inner.pack_start(self.vocab_scrolled, True, True, 0)
 
@@ -1681,33 +1678,6 @@ class SettingsDialog(Gtk.Dialog):
         logger.info(f"Voice commands {'enabled' if enabled else 'disabled'}")
         return False
 
-    def _on_vocab_key_press(self, textview, event):
-        """Intercept Ctrl+V / Ctrl+Shift+V / Shift+Insert to paste as plain text."""
-        import re
-
-        state = event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
-        keyval = event.keyval
-
-        is_paste = (
-            (state & Gdk.ModifierType.CONTROL_MASK and keyval in (Gdk.KEY_v, Gdk.KEY_V))
-            or (state & Gdk.ModifierType.SHIFT_MASK and keyval == Gdk.KEY_Insert)
-        )
-        if not is_paste:
-            return False  # Let other keys through
-
-        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-        text = clipboard.wait_for_text()
-        if text:
-            # Only keep word chars, basic punctuation, and whitespace
-            clean = re.sub(r"[^\w\s,.\-/()&'+]", "", text, flags=re.UNICODE)
-            # Collapse whitespace to single space
-            clean = re.sub(r"\s+", " ", clean).strip()
-            buf = textview.get_buffer()
-            if buf.get_has_selection():
-                buf.delete_selection(True, True)
-            buf.insert_at_cursor(clean)
-        return True  # Block default paste
-
     def _on_vocabulary_changed(self, buffer):
         """Handle vocabulary text changes with debounce."""
         if self._initializing or self._applying_settings:
@@ -1718,11 +1688,25 @@ class SettingsDialog(Gtk.Dialog):
         self._vocab_save_timeout_id = GLib.timeout_add(1000, self._save_vocabulary)
 
     def _save_vocabulary(self):
-        """Save vocabulary from text buffer to config."""
+        """Save vocabulary from text buffer to config, sanitizing the text."""
+        import re
+
         self._vocab_save_timeout_id = None
         buffer = self.vocab_textview.get_buffer()
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
-        vocab_list = [term.strip() for term in text.split(",") if term.strip()]
+
+        # Sanitize: keep only word chars, basic punctuation, whitespace
+        clean = re.sub(r"[^\w\s,.\-/()&'+]", "", text, flags=re.UNICODE)
+        clean = re.sub(r"\s+", " ", clean).strip()
+
+        vocab_list = [term.strip() for term in clean.split(",") if term.strip()]
+        clean_text = ", ".join(vocab_list)
+
+        # Write sanitized text back to buffer (briefly block changed signal)
+        self._applying_settings = True
+        buffer.set_text(clean_text)
+        self._applying_settings = False
+
         self.config_manager.set("speech_recognition", "custom_vocabulary", vocab_list)
         self.config_manager.save_settings()
         # Update running engine via public API
