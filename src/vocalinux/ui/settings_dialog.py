@@ -1108,42 +1108,31 @@ class SettingsDialog(Gtk.Dialog):
 
         self.recognition_settings_tab.pack_start(group, False, False, 0)
 
-        # Custom Vocabulary group — standalone Gtk.Box (not PreferencesGroup)
-        # because we need a free-form TextView, not a ListBox of rows
-        vocab_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        vocab_box.get_style_context().add_class("preferences-group")
-
-        vocab_header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        vocab_header.set_margin_top(12)
-        vocab_header.set_margin_bottom(4)
-        vocab_header.set_margin_start(16)
-        vocab_header.set_margin_end(16)
-
-        vocab_title = Gtk.Label(label="Custom Vocabulary", xalign=0)
-        vocab_title.get_style_context().add_class("preferences-group-title")
-        vocab_header.pack_start(vocab_title, False, False, 0)
-
-        vocab_desc = Gtk.Label(
-            label="Words and phrases that should be recognized correctly (Whisper/whisper.cpp only, comma-separated)",
-            xalign=0,
-            wrap=True,
+        # Custom Vocabulary group — same pattern as Test Recognition
+        vocab_group = PreferencesGroup(
+            title="Custom Vocabulary",
+            description="Words and phrases that should be recognized correctly (Whisper/whisper.cpp only, comma-separated)",
         )
-        vocab_desc.get_style_context().add_class("preference-row-subtitle")
-        vocab_header.pack_start(vocab_desc, False, False, 0)
-        vocab_box.pack_start(vocab_header, False, False, 0)
+
+        vocab_container = Gtk.ListBoxRow()
+        vocab_container.set_activatable(False)
+        vocab_container.get_style_context().add_class("preference-row")
+
+        vocab_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        vocab_inner.set_margin_top(12)
+        vocab_inner.set_margin_bottom(12)
+        vocab_inner.set_margin_start(16)
+        vocab_inner.set_margin_end(16)
 
         # Multi-line text entry for vocabulary
         self.vocab_scrolled = Gtk.ScrolledWindow()
         self.vocab_scrolled.set_min_content_height(80)
-        self.vocab_scrolled.set_max_content_height(120)
-        self.vocab_scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.vocab_scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.vocab_scrolled.get_style_context().add_class("test-area")
 
         self.vocab_textview = Gtk.TextView()
         self.vocab_textview.set_wrap_mode(Gtk.WrapMode.WORD)
-        self.vocab_textview.set_left_margin(8)
-        self.vocab_textview.set_right_margin(8)
-        self.vocab_textview.set_top_margin(4)
-        self.vocab_textview.set_bottom_margin(4)
+        self.vocab_textview.get_style_context().add_class("test-textview")
         self.vocab_textview.set_tooltip_text(
             "Enter words or phrases separated by commas.\n"
             "Helps Whisper recognize specific terms correctly,\n"
@@ -1151,9 +1140,12 @@ class SettingsDialog(Gtk.Dialog):
             "Example: Repository, Commit, Docker, Pull Request, Deployment"
         )
         self.vocab_scrolled.add(self.vocab_textview)
-        vocab_box.pack_start(self.vocab_scrolled, True, True, 0)
+        vocab_inner.pack_start(self.vocab_scrolled, True, True, 0)
 
-        self.recognition_settings_tab.pack_start(vocab_box, False, False, 0)
+        vocab_container.add(vocab_inner)
+        vocab_group.listbox.add(vocab_container)
+
+        self.recognition_settings_tab.pack_start(vocab_group, False, False, 0)
 
         # Connect buffer changed signal with debounce
         self.vocab_textview.get_buffer().connect("changed", self._on_vocabulary_changed)
