@@ -1132,7 +1132,7 @@ class SettingsDialog(Gtk.Dialog):
         vocab_hint.get_style_context().add_class("preference-row-subtitle")
         vocab_hint_box.pack_start(vocab_hint, True, True, 0)
 
-        self.vocab_char_label = Gtk.Label(label="0 / 800", xalign=1)
+        self.vocab_char_label = Gtk.Label(label="0 / 700", xalign=1)
         self.vocab_char_label.get_style_context().add_class("preference-row-subtitle")
         vocab_hint_box.pack_end(self.vocab_char_label, False, False, 0)
 
@@ -1513,7 +1513,7 @@ class SettingsDialog(Gtk.Dialog):
         vocab_list = sr_settings.get("custom_vocabulary", [])
         vocab_text = ", ".join(vocab_list)
         self.vocab_textview.get_buffer().set_text(vocab_text)
-        self.vocab_char_label.set_text(f"{len(vocab_text)} / 800")
+        self.vocab_char_label.set_text(f"{len(vocab_text)} / 700")
 
     def _get_current_settings(self):
         """Get current settings from config manager."""
@@ -1692,14 +1692,14 @@ class SettingsDialog(Gtk.Dialog):
         """Update character counter and enforce 800 char limit."""
         text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
         char_count = len(text)
-        if char_count > 800:
+        if char_count > 700:
             # Truncate at limit
             self._applying_settings = True
-            truncated = text[:800].rsplit(",", 1)[0] if "," in text[:800] else text[:800]
+            truncated = text[:700].rsplit(",", 1)[0] if "," in text[:700] else text[:700]
             buffer.set_text(truncated)
             char_count = len(truncated)
             self._applying_settings = False
-        self.vocab_char_label.set_text(f"{char_count} / 800")
+        self.vocab_char_label.set_text(f"{char_count} / 700")
 
     def _on_vocabulary_changed(self, buffer):
         """Handle vocabulary text changes with debounce."""
