@@ -749,12 +749,12 @@ class SpeechRecognitionManager:
                     lang = None  # Auto-detect
 
                 # Build initial_prompt from custom vocabulary
-                # Whisper uses ~224 tokens per segment; keep prompt well under that
+                # Whisper limit: 224 tokens (~896 chars). Cap at 800 chars for safety.
                 initial_prompt = None
                 if self._custom_vocabulary:
                     prompt = ", ".join(self._custom_vocabulary)
-                    if len(prompt) > 200:
-                        prompt = prompt[:200].rsplit(",", 1)[0]
+                    if len(prompt) > 800:
+                        prompt = prompt[:800].rsplit(",", 1)[0]
                     initial_prompt = prompt
 
                 # Transcribe with Whisper (handles variable length audio automatically)
@@ -978,8 +978,8 @@ class SpeechRecognitionManager:
                 transcribe_kwargs = {"language": lang}
                 if self._custom_vocabulary:
                     prompt = ", ".join(self._custom_vocabulary)
-                    if len(prompt) > 200:
-                        prompt = prompt[:200].rsplit(",", 1)[0]
+                    if len(prompt) > 800:
+                        prompt = prompt[:800].rsplit(",", 1)[0]
                     transcribe_kwargs["initial_prompt"] = prompt
 
                 try:
