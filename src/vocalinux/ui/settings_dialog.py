@@ -1109,20 +1109,25 @@ class SettingsDialog(Gtk.Dialog):
         self.recognition_settings_tab.pack_start(group, False, False, 0)
 
         # Custom Vocabulary group — same pattern as Test Recognition
-        vocab_group = PreferencesGroup(
-            title="Custom Vocabulary",
-            description="Words and phrases that should be recognized correctly (Whisper/whisper.cpp only, comma-separated)",
-        )
+        vocab_group = PreferencesGroup(title="Custom Vocabulary")
 
         vocab_container = Gtk.ListBoxRow()
         vocab_container.set_activatable(False)
         vocab_container.get_style_context().add_class("preference-row")
 
-        vocab_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        vocab_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         vocab_inner.set_margin_top(12)
         vocab_inner.set_margin_bottom(12)
         vocab_inner.set_margin_start(16)
         vocab_inner.set_margin_end(16)
+
+        vocab_hint = Gtk.Label(
+            label="Words and phrases that should be recognized correctly (Whisper/whisper.cpp only, comma-separated)",
+            xalign=0,
+            wrap=True,
+        )
+        vocab_hint.get_style_context().add_class("preference-row-subtitle")
+        vocab_inner.pack_start(vocab_hint, False, False, 0)
 
         # Multi-line text entry for vocabulary
         self.vocab_scrolled = Gtk.ScrolledWindow()
