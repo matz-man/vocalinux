@@ -1144,6 +1144,9 @@ class SettingsDialog(Gtk.Dialog):
             "e.g. English words in German speech.\n"
             "Example: Repository, Commit, Docker, Pull Request, Deployment"
         )
+        self.vocab_textview.set_accepts_tab(False)
+        # Intercept paste to strip formatting and control characters
+        self.vocab_textview.connect("paste-clipboard", self._on_vocab_paste)
         self.vocab_scrolled.add(self.vocab_textview)
         vocab_inner.pack_start(self.vocab_scrolled, True, True, 0)
 
@@ -1676,6 +1679,26 @@ class SettingsDialog(Gtk.Dialog):
             logger.warning(f"Failed to apply voice commands toggle immediately: {e}")
         logger.info(f"Voice commands {'enabled' if enabled else 'disabled'}")
         return False
+
+    def _on_vocab_paste(self, textview):
+        """Intercept paste to insert plain text only, stripping control characters."""
+        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        text = clipboard.wait_for_text()
+        if text:
+            # Strip control characters except newline, replace newlines with comma-space
+            import unicodedata
+            clean = "".join(
+                c for c in text
+                if not unicodedata.category(c).startswith("C") or c == "\n"
+            )
+            clean = clean.replace("\n", ", ")
+            # Insert at cursor, replacing selection if any
+            buf = textview.get_buffer()
+            if buf.get_has_selection():
+                buf.delete_selection(True, True)
+            buf.insert_at_cursor(clean)
+        # Stop default paste handler
+        textview.stop_emission_by_name("paste-clipboard")
 
     def _on_vocabulary_changed(self, buffer):
         """Handle vocabulary text changes with debounce."""
