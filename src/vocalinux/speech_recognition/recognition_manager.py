@@ -518,6 +518,9 @@ class SpeechRecognitionManager:
         self._voice_commands_preference = kwargs.get("voice_commands_enabled")
         self._voice_commands_enabled = self._resolve_voice_commands_enabled()
 
+        # Custom vocabulary for Whisper initial_prompt (improves technical term recognition)
+        self._custom_vocabulary = kwargs.get("custom_vocabulary", [])
+
         self.text_callbacks: List[Callable[[str], None]] = []
         self.state_callbacks: List[Callable[[RecognitionState], None]] = []
         self.action_callbacks: List[Callable[[str], None]] = []
@@ -745,6 +748,11 @@ class SpeechRecognitionManager:
                 elif self.language == "auto":
                     lang = None  # Auto-detect
 
+                # Build initial_prompt from custom vocabulary
+                initial_prompt = None
+                if self._custom_vocabulary:
+                    initial_prompt = ", ".join(self._custom_vocabulary)
+
                 # Transcribe with Whisper (handles variable length audio automatically)
                 result = self.model.transcribe(
                     audio_float,
@@ -754,6 +762,7 @@ class SpeechRecognitionManager:
                     temperature=0.0,  # Greedy decoding for consistency
                     no_speech_threshold=0.6,
                     fp16=use_fp16,  # Explicitly set to avoid warning on CPU
+                    initial_prompt=initial_prompt,
                 )
 
             text = result.get("text", "").strip()
@@ -962,7 +971,11 @@ class SpeechRecognitionManager:
                 # Transcribe with whisper.cpp
                 # pywhispercpp expects audio as numpy array
                 transcribe_start = time.time()
-                segments = self.model.transcribe(audio_float, language=lang)
+                transcribe_kwargs = {"language": lang}
+                if self._custom_vocabulary:
+                    transcribe_kwargs["initial_prompt"] = ", ".join(self._custom_vocabulary)
+
+                segments = self.model.transcribe(audio_float, **transcribe_kwargs)
                 transcribe_duration = time.time() - transcribe_start
 
             # Extract text from segments, filtering non-speech tokens
@@ -2048,6 +2061,9 @@ class SpeechRecognitionManager:
 
         if "voice_commands_enabled" in kwargs:
             self._voice_commands_preference = kwargs.get("voice_commands_enabled")
+
+        if "custom_vocabulary" in kwargs:
+            self._custom_vocabulary = kwargs["custom_vocabulary"]
 
         self._voice_commands_enabled = self._resolve_voice_commands_enabled()
 

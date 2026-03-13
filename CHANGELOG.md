@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com).
 ### Added
 
 - `custom_vocabulary` field in `DEFAULT_CONFIG["speech_recognition"]`: a curated list of technical terms (git, Docker, Kubernetes, API, etc.) used as Whisper's `initial_prompt` to improve recognition of English terms in German speech
+- `SpeechRecognitionManager` now accepts `custom_vocabulary` kwarg and passes it as `initial_prompt` to both Whisper and Whisper.cpp transcribe APIs; also supported via `reconfigure()`
 - Custom keyboard shortcut support: users can now bind any key combination (e.g., Super+Ctrl, Ctrl+D, F5) as their voice typing shortcut
 - "Custom..." option in the shortcut dropdown that reveals a live key capture widget
 - ShortcutCaptureWidget: press "Change", then press desired keys to record a shortcut; ESC to cancel

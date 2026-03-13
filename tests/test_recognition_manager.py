@@ -1095,3 +1095,118 @@ class TestReconfigureMethod(unittest.TestCase):
 
         manager.reconfigure(audio_device_index=-1)
         self.assertIsNone(manager.audio_device_index)
+
+
+class TestCustomVocabularyPrompt(unittest.TestCase):
+    """Tests for custom vocabulary passed as initial_prompt to Whisper engines."""
+
+    def _make_numpy_mock(self):
+        """Create a numpy mock that supports the array operations used in transcription."""
+        np_mock = MagicMock()
+        # fake array that supports astype, len, division
+        fake_array = MagicMock()
+        fake_array.__len__ = MagicMock(return_value=1024 * 5)
+        fake_float_array = MagicMock()
+        fake_float_array.__len__ = MagicMock(return_value=1024 * 5)
+        fake_array.astype.return_value = fake_float_array / 32768.0
+        np_mock.frombuffer.return_value = fake_array
+        np_mock.int16 = "int16"
+        np_mock.float32 = "float32"
+        return np_mock
+
+    def setUp(self):
+        """Set up common patches."""
+        import sys
+
+        self.patcher_makedirs = patch("os.makedirs")
+        self.patcher_makedirs.start()
+
+        self.patcher_exists = patch("os.path.exists", return_value=True)
+        self.patcher_exists.start()
+
+        mock_vosk = MagicMock()
+        mock_vosk.Model = MagicMock()
+        mock_vosk.KaldiRecognizer = MagicMock()
+
+        mock_torch = MagicMock()
+        mock_torch.device.return_value = "cpu"
+
+        self.patcher_modules = patch.dict(
+            sys.modules,
+            {"vosk": mock_vosk, "torch": mock_torch},
+        )
+        self.patcher_modules.start()
+
+        from vocalinux.speech_recognition.recognition_manager import SpeechRecognitionManager
+
+        self.manager = SpeechRecognitionManager(engine="vosk")
+
+    def tearDown(self):
+        """Clean up patches."""
+        self.patcher_makedirs.stop()
+        self.patcher_exists.stop()
+        self.patcher_modules.stop()
+
+    def test_whisper_transcribe_uses_initial_prompt(self):
+        """Test that custom vocabulary is passed as initial_prompt to Whisper."""
+        import sys
+
+        vocabulary = ["Repository", "Docker", "Kubernetes"]
+        self.manager._custom_vocabulary = vocabulary
+        self.manager.engine = "whisper"
+        self.manager.language = "de"
+
+        mock_model = MagicMock()
+        mock_model.transcribe.return_value = {"text": "test"}
+        mock_model.device = "cpu"
+        self.manager.model = mock_model
+
+        np_mock = self._make_numpy_mock()
+        with patch.dict(sys.modules, {"numpy": np_mock}):
+            self.manager._transcribe_with_whisper([b"\x00" * 2048] * 5)
+
+        call_kwargs = mock_model.transcribe.call_args[1]
+        self.assertIn("initial_prompt", call_kwargs)
+        self.assertIn("Repository", call_kwargs["initial_prompt"])
+        self.assertIn("Docker", call_kwargs["initial_prompt"])
+
+    def test_whispercpp_transcribe_uses_initial_prompt(self):
+        """Test that custom vocabulary is passed as initial_prompt to whisper.cpp."""
+        import sys
+
+        vocabulary = ["Repository", "Docker"]
+        self.manager._custom_vocabulary = vocabulary
+        self.manager.engine = "whisper_cpp"
+        self.manager.language = "de"
+
+        mock_model = MagicMock()
+        mock_model.transcribe.return_value = []
+        self.manager.model = mock_model
+
+        np_mock = self._make_numpy_mock()
+        with patch.dict(sys.modules, {"numpy": np_mock}):
+            self.manager._transcribe_with_whispercpp([b"\x00" * 2048] * 5)
+
+        call_kwargs = mock_model.transcribe.call_args[1]
+        self.assertIn("initial_prompt", call_kwargs)
+        self.assertIn("Repository", call_kwargs["initial_prompt"])
+
+    def test_empty_vocabulary_no_initial_prompt(self):
+        """Test that empty vocabulary does not set initial_prompt."""
+        import sys
+
+        self.manager._custom_vocabulary = []
+        self.manager.engine = "whisper"
+        self.manager.language = "de"
+
+        mock_model = MagicMock()
+        mock_model.transcribe.return_value = {"text": "test"}
+        mock_model.device = "cpu"
+        self.manager.model = mock_model
+
+        np_mock = self._make_numpy_mock()
+        with patch.dict(sys.modules, {"numpy": np_mock}):
+            self.manager._transcribe_with_whisper([b"\x00" * 2048] * 5)
+
+        call_kwargs = mock_model.transcribe.call_args[1]
+        self.assertIsNone(call_kwargs.get("initial_prompt"))
