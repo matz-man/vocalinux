@@ -38,6 +38,8 @@ class TestConfigManager(unittest.TestCase):
         self.logger_patcher = patch("vocalinux.ui.config_manager.logger")
         self.mock_logger = self.logger_patcher.start()
 
+        self.config_manager = ConfigManager()
+
     def tearDown(self):
         """Clean up after tests."""
         self.config_dir_patcher.stop()
@@ -392,6 +394,13 @@ class TestConfigManager(unittest.TestCase):
 
         config_manager = ConfigManager()
         self.assertEqual(config_manager.config["shortcuts"]["toggle_recognition"], "ctrl+ctrl")
+
+    def test_default_config_has_custom_vocabulary(self):
+        """Test that default config includes custom_vocabulary field."""
+        config = self.config_manager.get_settings()
+        sr = config["speech_recognition"]
+        self.assertIn("custom_vocabulary", sr)
+        self.assertIsInstance(sr["custom_vocabulary"], list)
 
     def test_non_super_shortcut_unchanged(self):
         test_config = {

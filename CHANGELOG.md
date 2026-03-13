@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Added
 
+- Custom vocabulary support: configurable list of technical terms (e.g., Repository, Docker, API) passed as Whisper `initial_prompt` to improve recognition of English terms in non-English speech
+- Vocabulary text entry in Settings → Recognition tab (comma-separated, auto-saved with debounce)
 - Custom keyboard shortcut support: users can now bind any key combination (e.g., Super+Ctrl, Ctrl+D, F5) as their voice typing shortcut
 - "Custom..." option in the shortcut dropdown that reveals a live key capture widget
 - ShortcutCaptureWidget: press "Change", then press desired keys to record a shortcut; ESC to cancel
