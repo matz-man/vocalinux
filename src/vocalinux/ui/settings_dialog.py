@@ -1145,8 +1145,9 @@ class SettingsDialog(Gtk.Dialog):
             "Example: Repository, Commit, Docker, Pull Request, Deployment"
         )
         self.vocab_textview.set_accepts_tab(False)
-        # Intercept paste to strip formatting and control characters
-        self.vocab_textview.connect("paste-clipboard", self._on_vocab_paste)
+        # Intercept Ctrl+V to paste plain text only (paste-clipboard signal
+        # is an action signal and cannot reliably block the default handler)
+        self.vocab_textview.connect("key-press-event", self._on_vocab_key_press)
         self.vocab_scrolled.add(self.vocab_textview)
         vocab_inner.pack_start(self.vocab_scrolled, True, True, 0)
 
@@ -1680,25 +1681,32 @@ class SettingsDialog(Gtk.Dialog):
         logger.info(f"Voice commands {'enabled' if enabled else 'disabled'}")
         return False
 
-    def _on_vocab_paste(self, textview):
-        """Intercept paste to insert plain text only, stripping all non-printable characters."""
+    def _on_vocab_key_press(self, textview, event):
+        """Intercept Ctrl+V / Ctrl+Shift+V / Shift+Insert to paste as plain text."""
         import re
+
+        state = event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
+        keyval = event.keyval
+
+        is_paste = (
+            (state & Gdk.ModifierType.CONTROL_MASK and keyval in (Gdk.KEY_v, Gdk.KEY_V))
+            or (state & Gdk.ModifierType.SHIFT_MASK and keyval == Gdk.KEY_Insert)
+        )
+        if not is_paste:
+            return False  # Let other keys through
 
         clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         text = clipboard.wait_for_text()
         if text:
-            # Only keep printable chars: letters, digits, punctuation, basic whitespace
-            # This strips zero-width chars, control chars, BOM, NBSP, etc.
+            # Only keep word chars, basic punctuation, and whitespace
             clean = re.sub(r"[^\w\s,.\-/()&'+]", "", text, flags=re.UNICODE)
-            # Collapse whitespace (tabs, multiple spaces, newlines) to single space
+            # Collapse whitespace to single space
             clean = re.sub(r"\s+", " ", clean).strip()
-            # Insert at cursor, replacing selection if any
             buf = textview.get_buffer()
             if buf.get_has_selection():
                 buf.delete_selection(True, True)
             buf.insert_at_cursor(clean)
-        # Stop default paste handler
-        textview.stop_emission_by_name("paste-clipboard")
+        return True  # Block default paste
 
     def _on_vocabulary_changed(self, buffer):
         """Handle vocabulary text changes with debounce."""
