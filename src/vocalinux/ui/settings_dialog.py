@@ -1124,7 +1124,7 @@ class SettingsDialog(Gtk.Dialog):
         vocab_header.pack_start(vocab_title, False, False, 0)
 
         vocab_desc = Gtk.Label(
-            label="Technical terms for better recognition (Whisper/whisper.cpp only, comma-separated)",
+            label="Words and phrases that should be recognized correctly (Whisper/whisper.cpp only, comma-separated)",
             xalign=0,
             wrap=True,
         )
@@ -1145,9 +1145,10 @@ class SettingsDialog(Gtk.Dialog):
         self.vocab_textview.set_top_margin(4)
         self.vocab_textview.set_bottom_margin(4)
         self.vocab_textview.set_tooltip_text(
-            "Enter technical terms separated by commas.\n"
-            "These words help Whisper recognize English terms in non-English speech.\n"
-            "Example: Repository, Commit, Docker, API, Frontend"
+            "Enter words or phrases separated by commas.\n"
+            "Helps Whisper recognize specific terms correctly,\n"
+            "e.g. English words in German speech.\n"
+            "Example: Repository, Commit, Docker, Pull Request, Deployment"
         )
         self.vocab_scrolled.add(self.vocab_textview)
         vocab_box.pack_start(self.vocab_scrolled, True, True, 0)
