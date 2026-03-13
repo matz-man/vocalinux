@@ -27,6 +27,14 @@ DEFAULT_CONFIG = {
         "vad_sensitivity": 3,  # Voice Activity Detection sensitivity (1-5)
         "silence_timeout": 2.0,  # Seconds of silence before stopping
         "voice_commands_enabled": None,  # None = auto (enabled for VOSK, disabled for Whisper)
+        "custom_vocabulary": [
+            "Repository", "Commit", "Push", "Pull", "Merge", "Branch", "Clone",
+            "Docker", "Kubernetes", "Container", "Backend", "Frontend", "API",
+            "Endpoint", "Deployment", "Pipeline", "Server", "Client", "Cloud",
+            "Framework", "Library", "Package", "Module", "Middleware",
+            "Refactoring", "Debugging", "Logging", "Monitoring", "Caching",
+            "Token", "OAuth", "Webhook", "Microservice", "Cluster",
+        ],
     },
     "audio": {
         "device_index": None,  # Audio input device index (None for system default)
